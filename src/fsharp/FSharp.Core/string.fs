@@ -97,3 +97,52 @@ namespace Microsoft.FSharp.Core
         let length (str:string) =
             let str = emptyIfNull str
             str.Length
+        
+        [<CompiledName("Contains")>]
+        let contains (value:string) (str:string) =
+            if isNull str then false
+            else str.Contains(value)
+
+        [<CompiledName("CompareComparison")>]
+        let compareComparison (comparisonType:StringComparison) (strB:string) (strA:string) =
+            String.Compare(strA, strB, comparisonType)
+
+        [<CompiledName("Compare")>]
+        let compare (strB:string) (strA:string) =
+            compareComparison StringComparison.InvariantCultureIgnoreCase strB strA
+
+        [<CompiledName("EndsWithComparison")>]
+        let endsWithComparison (comparisonType:StringComparison) (value:string) (str:string) =
+            if isNull str then false
+            else str.EndsWith(value, comparisonType)
+
+        [<CompiledName("EndsWith")>]
+        let endsWith (value:string) (str:string) =
+            endsWithComparison StringComparison.InvariantCultureIgnoreCase value str
+        
+        [<CompiledName("Equals")>]
+        let equals (comparisonType:StringComparison) (value:string) (str:string) =
+            if isNull str then false
+            else str.Equals(value, comparisonType)
+            
+        [<CompiledName("IndexOfComparison")>]
+        let indexOfComparison (comparisonType:StringComparison) (value:string) (str:string) =
+            if isNull str then None
+            else
+                let index = str.IndexOf(value, comparisonType)
+                if index = -1 then None
+                else Some index
+
+        [<CompiledName("IndexOf")>]
+        let indexOf (value:string) (str:string) =
+            indexOfComparison StringComparison.InvariantCultureIgnoreCase value str
+
+        [<CompiledName("LastIndexOfComparison")>]
+        let lastIndexOfComparison (comparisonType:StringComparison) (value:string) (str:string) =
+            let str = emptyIfNull str            
+            let index = str.LastIndexOf(value, comparisonType)
+            if index = -1 then None else Some index
+
+        [<CompiledName("LastIndexOf")>]
+        let lastIndexOf (value:string) (str:string) =
+            lastIndexOfComparison StringComparison.InvariantCultureIgnoreCase value str

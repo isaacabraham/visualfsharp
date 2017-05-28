@@ -4,6 +4,7 @@ namespace FSharp.Core.Unittests.FSharp_Core.Microsoft_FSharp_Collections
 
 open System
 open NUnit.Framework
+open FsCheck
 
 open FSharp.Core.Unittests.LibraryTestFx
 
@@ -183,3 +184,73 @@ type StringModule() =
 
         let e3 = String.length null
         Assert.AreEqual(0, e3)
+    
+    [<Test>]
+    member this.Contains() =
+        Check.QuickThrowOnFailure <|
+        fun (NonEmptyString str) (NonEmptyString value) ->
+            str.Contains value = String.contains value str
+
+    [<Test>]
+    member this.CompareComparison() =
+        Check.QuickThrowOnFailure <|
+        fun (strA:string) (strB:string) (comparisonType:StringComparison) ->
+            String.Compare(strA, strB, comparisonType) = String.compareComparison comparisonType strB strA
+    
+    [<Test>]
+    member this.Compare() =
+        Check.QuickThrowOnFailure <|
+        fun (strA:string) (strB:string) ->
+            String.compare strB strA = String.compareComparison StringComparison.InvariantCultureIgnoreCase strB strA
+
+    [<Test>]
+    member this.EndsWithComparison() =
+        Check.QuickThrowOnFailure <|
+        fun (comparisonType:StringComparison) (NonEmptyString value) (NonEmptyString str) ->
+            str.EndsWith(value, comparisonType) = String.endsWithComparison comparisonType value str
+
+    [<Test>]
+    member this.EndsWith() =
+        Check.QuickThrowOnFailure <|
+        fun (NonEmptyString value) (NonEmptyString str) ->
+            String.endsWithComparison StringComparison.InvariantCultureIgnoreCase value str = String.endsWith value str
+
+    [<Test>]
+    member this.Equals() =
+        Check.QuickThrowOnFailure <|
+        fun (comparisonType:StringComparison) (value:string) (NonEmptyString str) ->
+            str.Equals(value, comparisonType) = String.equals comparisonType value str
+
+    [<Test>]
+    member this.IndexOfComparison() =
+        Check.QuickThrowOnFailure <|
+        fun (comparisonType:StringComparison) (NonEmptyString value) (NonEmptyString str) ->
+            let indexOf = str.IndexOf(value, comparisonType)
+            let optionResult = String.indexOfComparison comparisonType value str
+            match indexOf, optionResult with
+            | -1, None -> true
+            | indexOf, Some optionResult when indexOf = optionResult -> true
+            | _ -> false
+
+    [<Test>]
+    member this.IndexOf() =
+        Check.QuickThrowOnFailure <|
+        fun (NonEmptyString value) (NonEmptyString str) ->
+            String.indexOf value str = String.indexOfComparison StringComparison.InvariantCultureIgnoreCase value str
+
+    [<Test>]
+    member this.LastIndexOfComparison() =
+        Check.QuickThrowOnFailure <|
+        fun (comparisonType:StringComparison) (NonEmptyString value) (NonEmptyString str) ->
+            let indexOf = str.LastIndexOf(value, comparisonType)
+            let optionResult = String.lastIndexOfComparison comparisonType value str
+            match indexOf, optionResult with
+            | -1, None -> true
+            | indexOf, Some optionResult when indexOf = optionResult -> true
+            | _ -> false
+
+    [<Test>]
+    member this.LastIndexOf() =
+        Check.QuickThrowOnFailure <|
+        fun (NonEmptyString value) (NonEmptyString str) ->
+            String.lastIndexOf value str = String.lastIndexOfComparison StringComparison.InvariantCultureIgnoreCase value str

@@ -113,4 +113,43 @@ namespace Microsoft.FSharp.Core
         /// <returns>The number of characters in the string.</returns>
         [<CompiledName("Length")>]
         val length: str:string -> int
+    
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("Contains")>]
+        val contains: value:string -> str:string -> bool
 
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("CompareComparison")>]
+        val compareComparison: comparisonType:StringComparison -> strB:string -> strA:string -> int
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("Compare")>]
+        val compare: strB:string -> strA:string -> int
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("EndsWithComparison")>]
+        val endsWithComparison: comparisonType:StringComparison -> value:string -> str:string -> bool
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("EndsWith")>]
+        val endsWith: value:string -> str:string -> bool
+        
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("Equals")>]
+        val equals: comparisonType:StringComparison -> value:string -> str:string -> bool
+            
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("IndexOfComparison")>]
+        val indexOfComparison: comparisonType:StringComparison -> value:string -> str:string -> int option
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("IndexOf")>]
+        val indexOf: value:string -> str:string -> int option
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("LastIndexOfComparison")>]
+        val lastIndexOfComparison: comparisonType:StringComparison -> value:string -> str:string -> int option
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("LastIndexOf")>]
+        val lastIndexOf: value:string -> str:string -> int option
