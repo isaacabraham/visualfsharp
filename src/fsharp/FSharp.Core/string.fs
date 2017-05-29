@@ -124,24 +124,25 @@ namespace Microsoft.FSharp.Core
         let equals (comparisonType:StringComparison) (value:string) (str:string) =
             if isNull str then false
             else str.Equals(value, comparisonType)
+
+        let inline checkIndex (func:_ * StringComparison -> _) comparisonType value str =
+            if isNull str then None
+            else
+                let index = func(value, comparisonType)
+                if index = -1 then None
+                else Some index
             
         [<CompiledName("IndexOfComparison")>]
         let indexOfComparison (comparisonType:StringComparison) (value:string) (str:string) =
-            if isNull str then None
-            else
-                let index = str.IndexOf(value, comparisonType)
-                if index = -1 then None
-                else Some index
+            checkIndex str.IndexOf comparisonType value str
+
+        [<CompiledName("LastIndexOfComparison")>]
+        let lastIndexOfComparison (comparisonType:StringComparison) (value:string) (str:string) =
+            checkIndex str.LastIndexOf comparisonType value str
 
         [<CompiledName("IndexOf")>]
         let indexOf (value:string) (str:string) =
             indexOfComparison StringComparison.InvariantCultureIgnoreCase value str
-
-        [<CompiledName("LastIndexOfComparison")>]
-        let lastIndexOfComparison (comparisonType:StringComparison) (value:string) (str:string) =
-            let str = emptyIfNull str            
-            let index = str.LastIndexOf(value, comparisonType)
-            if index = -1 then None else Some index
 
         [<CompiledName("LastIndexOf")>]
         let lastIndexOf (value:string) (str:string) =
