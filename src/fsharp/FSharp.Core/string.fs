@@ -125,7 +125,7 @@ namespace Microsoft.FSharp.Core
             if isNull str then false
             else str.Equals(value, comparisonType)
 
-        let inline checkIndex (func:_ * StringComparison -> _) comparisonType value str =
+        let inline checkIndex func (comparisonType:StringComparison) value str =
             if isNull str then None
             else
                 let index = func(value, comparisonType)
