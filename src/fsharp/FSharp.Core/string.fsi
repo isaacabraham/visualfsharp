@@ -119,16 +119,8 @@ namespace Microsoft.FSharp.Core
         val contains: value:string -> str:string -> bool
 
         /// <summary>Returns the length of the string.</summary>
-        [<CompiledName("CompareComparison")>]
-        val compareComparison: comparisonType:StringComparison -> strB:string -> strA:string -> int
-
-        /// <summary>Returns the length of the string.</summary>
         [<CompiledName("Compare")>]
         val compare: strB:string -> strA:string -> int
-
-        /// <summary>Returns the length of the string.</summary>
-        [<CompiledName("EndsWithComparison")>]
-        val endsWithComparison: comparisonType:StringComparison -> value:string -> str:string -> bool
 
         /// <summary>Returns the length of the string.</summary>
         [<CompiledName("EndsWith")>]
@@ -139,17 +131,61 @@ namespace Microsoft.FSharp.Core
         val equals: comparisonType:StringComparison -> value:string -> str:string -> bool
             
         /// <summary>Returns the length of the string.</summary>
-        [<CompiledName("IndexOfComparison")>]
-        val indexOfComparison: comparisonType:StringComparison -> value:string -> str:string -> int option
-
-        /// <summary>Returns the length of the string.</summary>
         [<CompiledName("IndexOf")>]
         val indexOf: value:string -> str:string -> int option
 
         /// <summary>Returns the length of the string.</summary>
-        [<CompiledName("LastIndexOfComparison")>]
-        val lastIndexOfComparison: comparisonType:StringComparison -> value:string -> str:string -> int option
-
-        /// <summary>Returns the length of the string.</summary>
         [<CompiledName("LastIndexOf")>]
         val lastIndexOf: value:string -> str:string -> int option
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("ReplaceChar")>]
+        val replaceChar: oldChar:char -> newChar:char -> str:string -> string
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("Replace")>]
+        val replace: oldValue:string -> newValue:string -> str:string -> string
+        
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("Split")>]
+        val split: separator:string array -> str:string -> string array
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("SplitChar")>]
+        val splitChar: separator:char array -> str:string -> string array
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("StartsWith")>]
+        val startsWith: value:string -> str:string -> bool
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("SubstringLength")>]
+        val substringLength: startIndex:int -> length: int -> str:string -> string
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("Substring")>]
+        val substring: startIndex:int -> str:string -> string
+        
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("ToLower")>]
+        val toLower: str:string -> string
+        
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("ToUpper")>]
+        val toUpper: str:string -> string
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("Trim")>]
+        val trim: str:string -> string
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("TrimChars")>]
+        val trimChars: trimChars:char [] -> str:string -> string
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("TrimStart")>]
+        val trimStart: trimChars:char [] -> str:string -> string
+            
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("TrimEnd")>]
+        val trimEnd: trimChars:char [] -> str:string -> string

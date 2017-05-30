@@ -21,7 +21,7 @@ Make sure each method works on:
 
 [<TestFixture>]
 type StringModule() =
-
+    let [<Literal>] DefaultComparison = StringComparison.Ordinal
     [<Test>]
     member this.Concat() =
         let e1 = String.concat null ["foo"]
@@ -187,33 +187,18 @@ type StringModule() =
     
     [<Test>]
     member this.Contains() =
-        Check.QuickThrowOnFailure <|
-        fun (NonEmptyString str) (NonEmptyString value) ->
-            str.Contains value = String.contains value str
+        Check.QuickThrowOnFailure <| fun (NonEmptyString str) (NonEmptyString value) ->
+            str.Contains(value) = String.contains value str
 
-    [<Test>]
-    member this.CompareComparison() =
-        Check.QuickThrowOnFailure <|
-        fun (strA:string) (strB:string) (comparisonType:StringComparison) ->
-            String.Compare(strA, strB, comparisonType) = String.compareComparison comparisonType strB strA
-    
     [<Test>]
     member this.Compare() =
-        Check.QuickThrowOnFailure <|
-        fun (strA:string) (strB:string) ->
-            String.compare strB strA = String.compareComparison StringComparison.InvariantCultureIgnoreCase strB strA
-
-    [<Test>]
-    member this.EndsWithComparison() =
-        Check.QuickThrowOnFailure <|
-        fun (comparisonType:StringComparison) (NonEmptyString value) (NonEmptyString str) ->
-            str.EndsWith(value, comparisonType) = String.endsWithComparison comparisonType value str
+        Check.QuickThrowOnFailure <| fun (strA:string) (strB:string) ->
+            String.Compare(strA, strB, DefaultComparison) = String.compare strB strA
 
     [<Test>]
     member this.EndsWith() =
-        Check.QuickThrowOnFailure <|
-        fun (NonEmptyString value) (NonEmptyString str) ->
-            String.endsWithComparison StringComparison.InvariantCultureIgnoreCase value str = String.endsWith value str
+        Check.QuickThrowOnFailure <| fun (NonEmptyString value) (NonEmptyString str) ->
+            str.EndsWith(value) = String.endsWith value str
 
     [<Test>]
     member this.Equals() =
@@ -222,28 +207,10 @@ type StringModule() =
             str.Equals(value, comparisonType) = String.equals comparisonType value str
 
     [<Test>]
-    member this.IndexOfComparison() =
-        Check.QuickThrowOnFailure <|
-        fun (comparisonType:StringComparison) (NonEmptyString value) (NonEmptyString str) ->
-            let indexOf = str.IndexOf(value, comparisonType)
-            let optionResult = String.indexOfComparison comparisonType value str
-            match indexOf, optionResult with
-            | -1, None -> true
-            | indexOf, Some optionResult when indexOf = optionResult -> true
-            | _ -> false
-
-    [<Test>]
     member this.IndexOf() =
-        Check.QuickThrowOnFailure <|
-        fun (NonEmptyString value) (NonEmptyString str) ->
-            String.indexOf value str = String.indexOfComparison StringComparison.InvariantCultureIgnoreCase value str
-
-    [<Test>]
-    member this.LastIndexOfComparison() =
-        Check.QuickThrowOnFailure <|
-        fun (comparisonType:StringComparison) (NonEmptyString value) (NonEmptyString str) ->
-            let indexOf = str.LastIndexOf(value, comparisonType)
-            let optionResult = String.lastIndexOfComparison comparisonType value str
+        Check.QuickThrowOnFailure <| fun (NonEmptyString value) (NonEmptyString str) ->
+            let indexOf = str.IndexOf(value, DefaultComparison)
+            let optionResult = String.indexOf value str
             match indexOf, optionResult with
             | -1, None -> true
             | indexOf, Some optionResult when indexOf = optionResult -> true
@@ -251,6 +218,82 @@ type StringModule() =
 
     [<Test>]
     member this.LastIndexOf() =
-        Check.QuickThrowOnFailure <|
-        fun (NonEmptyString value) (NonEmptyString str) ->
-            String.lastIndexOf value str = String.lastIndexOfComparison StringComparison.InvariantCultureIgnoreCase value str
+        Check.QuickThrowOnFailure <| fun (NonEmptyString value) (NonEmptyString str) ->
+            let indexOf = str.LastIndexOf(value, DefaultComparison)
+            let optionResult = String.lastIndexOf value str
+            match indexOf, optionResult with
+            | -1, None -> true
+            | indexOf, Some optionResult when indexOf = optionResult -> true
+            | _ -> false
+        
+    [<Test>]
+    member this.ReplaceChar() =
+        Check.QuickThrowOnFailure <| fun (NonEmptyString value) (newChar:char) ->
+            (value.Replace(value.[0], newChar) = String.replaceChar value.[0] newChar value)
+
+    [<Test>]
+    member this.Replace() =
+        Check.QuickThrowOnFailure <| fun (NonEmptyString value) (newValue:string) ->
+            let oldValue = String [| value.[0] |]
+            (value.Replace(oldValue , newValue) = String.replace oldValue newValue value)
+
+    [<Test>]
+    member this.Split() =
+        Check.QuickThrowOnFailure <| fun (NonEmptyString str) ->
+            let separator = [| String [| str.[0] |] |]
+            str.Split(separator, StringSplitOptions.None) = String.split separator str
+
+    [<Test>]
+    member this.SplitChar() =
+        Check.QuickThrowOnFailure <| fun (NonEmptyString str) ->
+        str.Split (str.[0]) = String.splitChar [| str.[0] |] str
+
+    [<Test>]
+    member this.StartsWith() =
+        Check.QuickThrowOnFailure <| fun (NonEmptyString str) (NonEmptyString value) ->
+            str.EndsWith value = String.endsWith value str
+
+    [<Test>]
+    member this.SubstringLength() =
+        Check.QuickThrowOnFailure <| fun (NonEmptyString str) (PositiveInt length) ->
+            length < str.Length ==> lazy
+                str.Substring(0, length) = String.substringLength 0 length str
+
+    [<Test>]
+    member this.Substring() =
+        Check.QuickThrowOnFailure <| fun (NonEmptyString str) (PositiveInt length) ->
+            length < str.Length ==> lazy
+                str.Substring(length) = String.substring length str
+       
+    [<Test>]
+    member this.ToLower() =
+        Check.QuickThrowOnFailure <| fun (NonEmptyString str) ->
+            str.ToLower() = String.toLower str
+        
+    [<Test>]
+    member this.ToUpper() =
+        Check.QuickThrowOnFailure <| fun (NonEmptyString str) ->
+            str.ToUpper() = String.toUpper str
+
+    [<Test>]
+    member this.Trim() =
+        Check.QuickThrowOnFailure <| fun (NonEmptyString str) ->
+            str.Trim() = String.trim str
+        
+    [<Test>]
+    member this.TrimChars() =
+        Check.QuickThrowOnFailure <| fun (NonEmptyString str) ->
+            let trimChars = [| str.[0] |]
+            str.Trim trimChars = String.trimChars trimChars str
+
+    [<Test>]
+    member this.TrimStart() =
+        Check.QuickThrowOnFailure <| fun (NonEmptyString str) ->
+            let trimChars = [| str.[0] |]
+            str.TrimStart trimChars = String.trimStart trimChars str
+
+    [<Test>]
+    member this.TrimEnd() =
+        Check.QuickThrowOnFailure <| fun (NonEmptyString str) ->
+            let trimChars = [| str.[str.Length - 1] |]
+            str.TrimEnd trimChars = String.trimEnd trimChars str

@@ -25,7 +25,6 @@ let windowed_and_length<'a when 'a : equality> (xs : 'a list) size =
         List.windowed size xs
         |> List.forall (fun x -> x.Length = size))
 
-
 [<Test>]
 let ``windowed returns list with correct length`` () =
     Check.QuickThrowOnFailure windowed_and_length<int>
