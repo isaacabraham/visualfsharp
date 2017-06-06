@@ -197,3 +197,27 @@ namespace Microsoft.FSharp.Core
         /// <summary>Returns the length of the string.</summary>
         [<CompiledName("TrimEnd")>]
         val trimEnd: trimChars:char [] -> str:string -> string
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("ToList")>]
+        val toList: str:string -> char list
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("ToArray")>]
+        val toArray: str:string -> char array
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("ToSeq")>]
+        val toSeq: str:string -> char seq
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("OfList")>]
+        val ofList: chars:char list -> string
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("OfArray")>]
+        val ofArray: chars:char array -> string
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("OfSeq")>]
+        val ofSeq: chars:char seq -> string

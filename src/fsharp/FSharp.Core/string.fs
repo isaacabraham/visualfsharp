@@ -186,3 +186,30 @@ namespace Microsoft.FSharp.Core
         [<CompiledName("TrimEnd")>]
         let trimEnd(trimChars:char []) (str:string) =
             str.TrimEnd(trimChars)
+
+        [<CompiledName("ToList")>]
+        let toList(str:string) =
+            str.ToCharArray() |> Array.toList
+
+        [<CompiledName("ToArray")>]
+        let toArray(str:string) =
+            str.ToCharArray()
+
+        [<CompiledName("ToSeq")>]
+        let toSeq(str:string) = seq {
+            use enumerator = str.GetEnumerator()
+            while enumerator.MoveNext() do
+                yield enumerator.Current }           
+
+        [<CompiledName("OfList")>]
+        let ofList(chars:char list) =
+            chars |> List.toArray |> String
+
+        [<CompiledName("OfArray")>]
+        let ofArray(chars:char array) =
+            chars |> String
+
+        [<CompiledName("OfSeq")>]
+        let ofSeq(chars:char seq) =
+            chars |> Seq.toArray |> String
+        

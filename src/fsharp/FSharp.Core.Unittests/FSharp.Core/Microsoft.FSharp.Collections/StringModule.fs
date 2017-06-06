@@ -21,6 +21,12 @@ Make sure each method works on:
 
 [<TestFixture>]
 type StringModule() =
+    let getChars (str:string) =
+        seq {
+            for c in 0 .. str.Length - 1 do
+                yield str.[c]
+        } |> Seq.toArray
+
     let [<Literal>] DefaultComparison = StringComparison.Ordinal
     [<Test>]
     member this.Concat() =
@@ -308,3 +314,33 @@ type StringModule() =
         Check.QuickThrowOnFailure <| fun (NonEmptyString str) ->
             let trimChars = [| str.[str.Length - 1] |]
             str.TrimEnd trimChars = String.trimEnd trimChars str
+
+    [<Test>]
+    member this.ToList() =
+        Check.QuickThrowOnFailure <| fun (NonEmptyString str) ->
+            getChars str |> Array.toList = String.toList str
+
+    [<Test>]
+    member this.ToArray() =
+        Check.QuickThrowOnFailure <| fun (NonEmptyString str) ->
+            getChars str = String.toArray str
+
+    [<Test>]
+    member this.ToSeq() =
+        Check.QuickThrowOnFailure <| fun (NonEmptyString str) ->
+            getChars str = (str |> String.toSeq |> Seq.toArray)
+
+    [<Test>]
+    member this.OfList() =
+        Check.QuickThrowOnFailure <| fun (NonEmptyString str) ->
+            str = (str.ToCharArray() |> Array.toList |> String.ofList)
+
+    [<Test>]
+    member this.OfArray() =
+        Check.QuickThrowOnFailure <| fun (NonEmptyString str) ->
+            str = (str.ToCharArray() |> String.ofArray)
+
+    [<Test>]
+    member this.OfSeq() =
+        Check.QuickThrowOnFailure <| fun (NonEmptyString str) ->
+            str = (str.ToCharArray() |> Array.toSeq |> String.ofSeq)

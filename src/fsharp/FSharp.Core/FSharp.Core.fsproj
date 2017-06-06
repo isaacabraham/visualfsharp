@@ -108,12 +108,6 @@
     <Compile Include="seq.fs">
       <Link>Collections/seq.fs</Link>
     </Compile>
-    <Compile Include="string.fsi">
-      <Link>Collections/string.fsi</Link>
-    </Compile>
-    <Compile Include="string.fs">
-      <Link>Collections/string.fs</Link>
-    </Compile>
     <Compile Include="list.fsi">
       <Link>Collections/list.fsi</Link>
     </Compile>
@@ -131,6 +125,12 @@
     </Compile>
     <Compile Include="array3.fs">
       <Link>Collections/array3.fs</Link>
+    </Compile>
+    <Compile Include="string.fsi">
+      <Link>Collections/string.fsi</Link>
+    </Compile>
+    <Compile Include="string.fs">
+      <Link>Collections/string.fs</Link>
     </Compile>
     <Compile Include="map.fsi">
       <Link>Collections/map.fsi</Link>
