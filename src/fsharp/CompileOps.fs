@@ -440,7 +440,6 @@ let ConstraintSolverMissingConstraintE() = DeclareResourceString("ConstraintSolv
 let ConstraintSolverTypesNotInEqualityRelation1E() = DeclareResourceString("ConstraintSolverTypesNotInEqualityRelation1","%s%s")
 let ConstraintSolverTypesNotInEqualityRelation2E() = DeclareResourceString("ConstraintSolverTypesNotInEqualityRelation2", "%s%s")
 let ConstraintSolverTypesNotInSubsumptionRelationE() = DeclareResourceString("ConstraintSolverTypesNotInSubsumptionRelation","%s%s%s")
-let ConstraintSolverErrorE() = DeclareResourceString("ConstraintSolverError","%s")
 let ErrorFromAddingTypeEquation1E() = DeclareResourceString("ErrorFromAddingTypeEquation1","%s%s%s")
 let ErrorFromAddingTypeEquation2E() = DeclareResourceString("ErrorFromAddingTypeEquation2","%s%s%s")
 let ErrorFromApplyingDefault1E() = DeclareResourceString("ErrorFromApplyingDefault1","%s")
@@ -629,6 +628,7 @@ let OutputPhasedErrorR (os:StringBuilder) (err:PhasedDiagnostic) =
           let t1, t2, _cxs = NicePrint.minimalStringsOfTwoTypes denv t1 t2
           
           match contextInfo with
+          | ContextInfo.IfExpression range when range = m -> os.Append(FSComp.SR.ifExpression(t1,t2)) |> ignore
           | ContextInfo.OmittedElseBranch range when range = m -> os.Append(FSComp.SR.missingElseBranch(t2)) |> ignore
           | ContextInfo.ElseBranchResult range when range = m -> os.Append(FSComp.SR.elseBranchHasWrongType(t1,t2)) |> ignore
           | _ -> os.Append(ConstraintSolverTypesNotInEqualityRelation1E().Format t1 t2 )  |> ignore
@@ -640,6 +640,7 @@ let OutputPhasedErrorR (os:StringBuilder) (err:PhasedDiagnostic) =
           let t1, t2, _cxs = NicePrint.minimalStringsOfTwoTypes denv t1 t2
           
           match contextInfo with
+          | ContextInfo.IfExpression range when range = m -> os.Append(FSComp.SR.ifExpression(t1,t2)) |> ignore
           | ContextInfo.OmittedElseBranch range when range = m -> os.Append(FSComp.SR.missingElseBranch(t2)) |> ignore
           | ContextInfo.ElseBranchResult range when range = m -> os.Append(FSComp.SR.elseBranchHasWrongType(t1,t2)) |> ignore
           | _ -> os.Append(ConstraintSolverTypesNotInEqualityRelation2E().Format t1 t2) |> ignore
@@ -652,7 +653,7 @@ let OutputPhasedErrorR (os:StringBuilder) (err:PhasedDiagnostic) =
           if m.StartLine <> m2.StartLine then 
              os.Append(SeeAlsoE().Format (stringOfRange m2)) |> ignore
       | ConstraintSolverError(msg,m,m2) -> 
-         os.Append(ConstraintSolverErrorE().Format msg) |> ignore
+         os.Append msg |> ignore
          if m.StartLine <> m2.StartLine then 
             os.Append(SeeAlsoE().Format (stringOfRange m2)) |> ignore
       | ConstraintSolverRelatedInformation(fopt,_,e) -> 
@@ -665,6 +666,7 @@ let OutputPhasedErrorR (os:StringBuilder) (err:PhasedDiagnostic) =
          &&   typeEquiv g t2 t2' ->
           let t1,t2,tpcs = NicePrint.minimalStringsOfTwoTypes denv t1 t2
           match contextInfo with
+          | ContextInfo.IfExpression range when range = m -> os.Append(FSComp.SR.ifExpression(t1,t2)) |> ignore
           | ContextInfo.OmittedElseBranch range when range = m -> os.Append(FSComp.SR.missingElseBranch(t2)) |> ignore
           | ContextInfo.ElseBranchResult range when range = m -> os.Append(FSComp.SR.elseBranchHasWrongType(t1,t2)) |> ignore
           | ContextInfo.TupleInRecordFields ->
