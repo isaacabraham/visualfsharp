@@ -136,12 +136,20 @@ namespace Microsoft.FSharp.Core
             str.Replace(oldValue, newValue)
         
         [<CompiledName("Split")>]
-        let split (separator:string array) (str:string) =
+        let split (separator:char array) (str:string) =
             str.Split(separator, StringSplitOptions.None)
 
-        [<CompiledName("SplitChar")>]
-        let splitChar (separator:char array) (str:string) =
-            str.Split(separator)
+        [<CompiledName("SplitRemoveEmptyEntries")>]
+        let splitRemoveEmptyEntries (separator:char array) (str:string) =
+            str.Split(separator, StringSplitOptions.RemoveEmptyEntries)
+
+        [<CompiledName("SplitString")>]
+        let splitString (separator:string array) (str:string) =
+            str.Split(separator, StringSplitOptions.None)
+
+        [<CompiledName("SplitStringRemoveEmptyEntries")>]
+        let splitStringRemoveEmptyEntries (separator:string array) (str:string) =
+            str.Split(separator, StringSplitOptions.RemoveEmptyEntries)
 
         [<CompiledName("StartsWith")>]
         let startsWith (value:string) (str:string) = 

@@ -148,11 +148,19 @@ namespace Microsoft.FSharp.Core
         
         /// <summary>Returns the length of the string.</summary>
         [<CompiledName("Split")>]
-        val split: separator:string array -> str:string -> string array
+        val split: separator:char array -> str:string -> string array
 
         /// <summary>Returns the length of the string.</summary>
-        [<CompiledName("SplitChar")>]
-        val splitChar: separator:char array -> str:string -> string array
+        [<CompiledName("SplitRemoveEmptyEntries")>]
+        val splitRemoveEmptyEntries: separator:char array -> str:string -> string array
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("SplitString")>]
+        val splitString: separator:string array -> str:string -> string array
+
+        /// <summary>Returns the length of the string.</summary>
+        [<CompiledName("SplitStringRemoveEmptyEntries")>]
+        val splitStringRemoveEmptyEntries: separator:string array -> str:string -> string array
 
         /// <summary>Returns the length of the string.</summary>
         [<CompiledName("StartsWith")>]

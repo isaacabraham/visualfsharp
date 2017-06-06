@@ -240,13 +240,24 @@ type StringModule() =
     [<Test>]
     member this.Split() =
         Check.QuickThrowOnFailure <| fun (NonEmptyString str) ->
-            let separator = [| String [| str.[0] |] |]
-            str.Split(separator, StringSplitOptions.None) = String.split separator str
+            str.Split ([| str.[0] |], StringSplitOptions.None) = String.split [| str.[0] |] str
 
     [<Test>]
-    member this.SplitChar() =
+    member this.SplitString() =
         Check.QuickThrowOnFailure <| fun (NonEmptyString str) ->
-        str.Split (str.[0]) = String.splitChar [| str.[0] |] str
+            let separator = [| String [| str.[0] |] |]
+            str.Split(separator, StringSplitOptions.None) = String.splitString separator str
+
+    [<Test>]
+    member this.SplitRemoveEmptyEntries() =
+        Check.QuickThrowOnFailure <| fun (NonEmptyString str) ->
+            str.Split ([| str.[0] |], StringSplitOptions.RemoveEmptyEntries) = String.splitRemoveEmptyEntries [| str.[0] |] str
+
+    [<Test>]
+    member this.SplitStringRemoveEmptyEntries() =
+        Check.QuickThrowOnFailure <| fun (NonEmptyString str) ->
+            let separator = [| String [| str.[0] |] |]
+            str.Split(separator, StringSplitOptions.RemoveEmptyEntries) = String.splitStringRemoveEmptyEntries separator str
 
     [<Test>]
     member this.StartsWith() =
