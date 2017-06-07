@@ -196,10 +196,7 @@ namespace Microsoft.FSharp.Core
             str.ToCharArray()
 
         [<CompiledName("ToSeq")>]
-        let toSeq(str:string) = seq {
-            use enumerator = str.GetEnumerator()
-            while enumerator.MoveNext() do
-                yield enumerator.Current }           
+        let toSeq(str:string) = str :> char seq
 
         [<CompiledName("OfList")>]
         let ofList(chars:char list) =
