@@ -1,13 +1,8 @@
-// Copyright (c) Microsoft Corporation.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
+// Copyright (c) Microsoft Corporation.  All Rights Reserved.  See License.txt in the project root for license information.
 
 /// Solves constraints using a mutable constraint-solver state
 module internal Microsoft.FSharp.Compiler.ConstraintSolver
 
-open Internal.Utilities
-open Internal.Utilities.Collections
-open Microsoft.FSharp.Compiler.AbstractIL 
-open Microsoft.FSharp.Compiler.AbstractIL.Internal 
-open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library 
 open Microsoft.FSharp.Compiler 
 open Microsoft.FSharp.Compiler.AccessibilityLogic
 open Microsoft.FSharp.Compiler.Ast
@@ -16,7 +11,6 @@ open Microsoft.FSharp.Compiler.Tast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.Import
 open Microsoft.FSharp.Compiler.Tastops
-open Microsoft.FSharp.Compiler.Tast
 open Microsoft.FSharp.Compiler.TcGlobals
 open Microsoft.FSharp.Compiler.Infos
 open Microsoft.FSharp.Compiler.MethodCalls
@@ -62,6 +56,8 @@ type ContextInfo =
 | RecordFields
 /// The type equation comes from the verification of a tuple in record fields.
 | TupleInRecordFields
+/// The type equation comes from a list or array constructor
+| CollectionElement of bool * range
 /// The type equation comes from a return in a computation expression.
 | ReturnInComputationExpression
 /// The type equation comes from a yield in a computation expression.
@@ -70,6 +66,11 @@ type ContextInfo =
 | RuntimeTypeTest of bool
 /// The type equation comes from an downcast where a upcast could be used.
 | DowncastUsedInsteadOfUpcast of bool
+/// The type equation comes from a return type of a pattern match clause (not the first clause).
+| FollowingPatternMatchClause of range
+/// The type equation comes from a pattern match guard.
+| PatternMatchGuard of range
+
 
 exception ConstraintSolverTupleDiffLengths              of DisplayEnv * TType list * TType list * range * range
 exception ConstraintSolverInfiniteTypes                 of ContextInfo * DisplayEnv * TType * TType * range * range

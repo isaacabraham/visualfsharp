@@ -1,6 +1,6 @@
 ﻿
 #if INTERACTIVE
-#r "../../Debug/net40/bin/FSharp.Compiler.Service.dll"
+#r "../../Debug/fcs/net45/FSharp.Compiler.Service.dll" // note, run 'build fcs debug' to generate this, this DLL has a public API so can be used from F# Interactive
 #r "../../packages/NUnit.3.5.0/lib/net45/nunit.framework.dll"
 #load "FsUnit.fs"
 #load "Common.fs"
@@ -38,13 +38,24 @@ module internal Project1A =
     let fileSource1 = """
 module Project1A
 
+/// This is type C
 type C() = 
     static member M(arg1: int, arg2: int, ?arg3 : int) = arg1 + arg2 + defaultArg arg3 4
 
+/// This is x1
 let x1 = C.M(arg1 = 3, arg2 = 4, arg3 = 5)
 
+/// This is x2
 let x2 = C.M(arg1 = 3, arg2 = 4, ?arg3 = Some 5)
 
+/// This is type U
+type U = 
+
+   /// This is Case1
+   | Case1 of int
+
+   /// This is Case2
+   | Case2 of string
     """
     File.WriteAllText(fileName1, fileSource1)
 
@@ -100,7 +111,8 @@ open Project1A
 open Project1B
 
 let p = (Project1A.x1, Project1B.b)
-
+let c = C()
+let u = Case1 3
     """
     File.WriteAllText(fileName1, fileSource1)
 
@@ -138,7 +150,7 @@ let ``Test multi project 1 basic`` () =
 
 
     [ for x in wholeProjectResults.AssemblySignature.Entities.[0].MembersFunctionsAndValues -> x.DisplayName ] 
-        |> shouldEqual ["p"]
+        |> shouldEqual ["p"; "c"; "u"]
 
 [<Test>]
 let ``Test multi project 1 all symbols`` () = 
@@ -179,6 +191,54 @@ let ``Test multi project 1 all symbols`` () =
             |> Array.map (fun s -> s.Symbol.DisplayName, MultiProject1.cleanFileName  s.FileName, tups s.Symbol.DeclarationLocation.Value) 
 
     usesOfx1FromProject1AInMultiProject1 |> shouldEqual usesOfx1FromMultiProject1InMultiProject1
+
+[<Test>]
+let ``Test multi project 1 xmldoc`` () = 
+
+    let p1A = checker.ParseAndCheckProject(Project1A.options) |> Async.RunSynchronously
+    let p1B = checker.ParseAndCheckProject(Project1B.options) |> Async.RunSynchronously
+    let mp = checker.ParseAndCheckProject(MultiProject1.options) |> Async.RunSynchronously
+
+    let x1FromProject1A = 
+        [ for s in p1A.GetAllUsesOfAllSymbols() |> Async.RunSynchronously do
+             if  s.Symbol.DisplayName = "x1" then 
+                 yield s.Symbol ]   |> List.head
+
+    let x1FromProjectMultiProject = 
+        [ for s in mp.GetAllUsesOfAllSymbols() |> Async.RunSynchronously do
+             if  s.Symbol.DisplayName = "x1" then 
+                 yield s.Symbol ]   |> List.head
+
+    let ctorFromProjectMultiProject = 
+        [ for s in mp.GetAllUsesOfAllSymbols() |> Async.RunSynchronously do
+             if  s.Symbol.DisplayName = "C" then 
+                 yield s.Symbol ]   |> List.head
+
+    let case1FromProjectMultiProject = 
+        [ for s in mp.GetAllUsesOfAllSymbols() |> Async.RunSynchronously do
+             if  s.Symbol.DisplayName = "Case1" then 
+                 yield s.Symbol ]   |> List.head
+
+
+    match x1FromProject1A with 
+    | :? FSharpMemberOrFunctionOrValue as v -> v.XmlDoc.Count |> shouldEqual 1
+    | _ -> failwith "odd symbol!"
+
+    match x1FromProjectMultiProject with 
+    | :? FSharpMemberOrFunctionOrValue as v -> v.XmlDoc.Count |> shouldEqual 1
+    | _ -> failwith "odd symbol!"
+
+    match ctorFromProjectMultiProject with 
+    | :? FSharpMemberOrFunctionOrValue as c -> c.XmlDoc.Count |> shouldEqual 0
+    | _ -> failwith "odd symbol!"
+
+    match ctorFromProjectMultiProject with 
+    | :? FSharpMemberOrFunctionOrValue as c -> c.EnclosingEntity.Value.XmlDoc.Count |> shouldEqual 1
+    | _ -> failwith "odd symbol!"
+
+    match case1FromProjectMultiProject with 
+    | :? FSharpUnionCase as c -> c.XmlDoc.Count |> shouldEqual 1
+    | _ -> failwith "odd symbol!"
 
 //------------------------------------------------------------------------------------
 
@@ -439,14 +499,14 @@ let ``Test multi project symbols should pick up changes in dependent projects`` 
 
     //---------------- Change the file by adding a line, then re-check everything --------------------
     
-    let wt0 = System.DateTime.Now
-    let wt1 = File.GetLastWriteTime MultiProjectDirty1.fileName1
+    let wt0 = System.DateTime.UtcNow
+    let wt1 = File.GetLastWriteTimeUtc MultiProjectDirty1.fileName1
     printfn "Writing new content to file '%s'" MultiProjectDirty1.fileName1
 
     System.Threading.Thread.Sleep(1000)
     File.WriteAllText(MultiProjectDirty1.fileName1, System.Environment.NewLine + MultiProjectDirty1.content)
     printfn "Wrote new content to file '%s'"  MultiProjectDirty1.fileName1
-    let wt2 = File.GetLastWriteTime MultiProjectDirty1.fileName1
+    let wt2 = File.GetLastWriteTimeUtc MultiProjectDirty1.fileName1
     printfn "Current time: '%A', ticks = %d"  wt0 wt0.Ticks
     printfn "Old write time: '%A', ticks = %d"  wt1 wt1.Ticks
     printfn "New write time: '%A', ticks = %d"  wt2 wt2.Ticks
@@ -490,13 +550,13 @@ let ``Test multi project symbols should pick up changes in dependent projects`` 
 
     //---------------- Revert the change to the file --------------------
 
-    let wt0b = System.DateTime.Now
-    let wt1b = File.GetLastWriteTime MultiProjectDirty1.fileName1
+    let wt0b = System.DateTime.UtcNow
+    let wt1b = File.GetLastWriteTimeUtc MultiProjectDirty1.fileName1
     printfn "Writing old content to file '%s'" MultiProjectDirty1.fileName1
     System.Threading.Thread.Sleep(1000)
     File.WriteAllText(MultiProjectDirty1.fileName1, MultiProjectDirty1.content)
     printfn "Wrote old content to file '%s'"  MultiProjectDirty1.fileName1
-    let wt2b = File.GetLastWriteTime MultiProjectDirty1.fileName1
+    let wt2b = File.GetLastWriteTimeUtc MultiProjectDirty1.fileName1
     printfn "Current time: '%A', ticks = %d"  wt0b wt0b.Ticks
     printfn "Old write time: '%A', ticks = %d"  wt1b wt1b.Ticks
     printfn "New write time: '%A', ticks = %d"  wt2b wt2b.Ticks
@@ -742,7 +802,7 @@ let ``Test active patterns' XmlDocSig declared in referenced projects`` () =
     divisibleBySymbol.ToString() |> shouldEqual "symbol DivisibleBy"
 
     let divisibleByActivePatternCase = divisibleBySymbol :?> FSharpActivePatternCase
-    divisibleByActivePatternCase.XmlDoc |> Seq.toList |> shouldEqual []
+    divisibleByActivePatternCase.XmlDoc |> Seq.toList |> shouldEqual [ "A parameterized active pattern of divisibility" ]
     divisibleByActivePatternCase.XmlDocSig |> shouldEqual "M:Project3A.|DivisibleBy|_|(System.Int32,System.Int32)"
     let divisibleByGroup = divisibleByActivePatternCase.Group
     divisibleByGroup.IsTotal |> shouldEqual false
@@ -771,18 +831,179 @@ let ``Test max memory gets triggered`` () =
 
 //------------------------------------------------------------------------------------
 
-#if FX_ATLEAST_45
+#if !DOTNETCORE
 
 [<Test>]
 let ``Type provider project references should not throw exceptions`` () =
-    let projectFile = __SOURCE_DIRECTORY__ + @"/data/TypeProviderConsole/TypeProviderConsole.fsproj"
-    let options = ProjectCracker.GetProjectOptionsFromProjectFile(projectFile, [("Configuration", "Debug")])
+    //let options = ProjectCracker.GetProjectOptionsFromProjectFile(projectFile, [("Configuration", "Debug")])
+    let options = 
+          {ProjectFileName = __SOURCE_DIRECTORY__ + @"/data/TypeProviderConsole/TypeProviderConsole.fsproj";
+           SourceFiles = [|__SOURCE_DIRECTORY__ + @"/data/TypeProviderConsole/Program.fs"|];
+           Stamp = None
+           OtherOptions =
+            [|yield "--simpleresolution";
+              yield "--noframework";
+              yield "--out:" + __SOURCE_DIRECTORY__ + @"/data/TypeProviderConsole/bin/Debug/TypeProviderConsole.exe";
+              yield "--doc:" + __SOURCE_DIRECTORY__ + @"/data/TypeProviderConsole/bin/Debug/TypeProviderConsole.xml";
+              yield "--subsystemversion:6.00"; 
+              yield "--highentropyva+"; 
+              yield "--fullpaths";
+              yield "--flaterrors"; 
+              yield "--target:exe"; 
+              yield "--define:DEBUG"; 
+              yield "--define:TRACE";
+              yield "--debug+"; 
+              yield "--optimize-"; 
+              yield "--tailcalls-"; 
+              yield "--debug:full";
+              yield "--platform:anycpu";
+              for r in mkStandardProjectReferences () do
+                  yield "-r:" + r
+              yield "-r:" + __SOURCE_DIRECTORY__ + @"/data/TypeProviderLibrary/TypeProviderLibrary.dll"|];
+           ReferencedProjects =
+            [|(__SOURCE_DIRECTORY__ + @"/data/TypeProviderLibrary/TypeProviderLibrary.dll",
+               {ProjectFileName = __SOURCE_DIRECTORY__ + @"/data/TypeProviderLibrary/TypeProviderLibrary.fsproj";
+                SourceFiles = [|__SOURCE_DIRECTORY__ + @"/data/TypeProviderLibrary/Library1.fs"|];
+                Stamp = None
+                OtherOptions =
+                 [|yield "--simpleresolution"; 
+                   yield "--noframework";
+                   yield "--out:" + __SOURCE_DIRECTORY__ + @"/data/TypeProviderLibrary/TypeProviderLibrary.dll";
+                   yield "--doc:" + __SOURCE_DIRECTORY__ + @"/data/TypeProviderLibrary/bin/Debug/TypeProviderLibrary.xml";
+                   yield "--subsystemversion:6.00"; 
+                   yield "--highentropyva+"; 
+                   yield "--fullpaths";
+                   yield "--flaterrors"; 
+                   yield "--target:library"; 
+                   yield "--define:DEBUG";
+                   yield "--define:TRACE"; 
+                   yield "--debug+"; 
+                   yield "--optimize-"; 
+                   yield "--tailcalls-";
+                   yield "--debug:full"; 
+                   yield "--platform:anycpu";
+                   for r in mkStandardProjectReferences () do
+                       yield "-r:" + r
+                   yield "-r:" + __SOURCE_DIRECTORY__ + @"/data/TypeProviderLibrary/FSharp.Data.TypeProviders.dll"; 
+                  |];
+                ReferencedProjects = [||];
+                IsIncompleteTypeCheckEnvironment = false;
+                UseScriptResolutionRules = false;
+                LoadTime = System.DateTime.Now
+                UnresolvedReferences = None;
+                OriginalLoadReferences = [];
+                ExtraProjectInfo = None;})|];
+           IsIncompleteTypeCheckEnvironment = false;
+           UseScriptResolutionRules = false;
+           LoadTime = System.DateTime.Now
+           UnresolvedReferences = None;
+           OriginalLoadReferences = [];
+           ExtraProjectInfo = None;}
+
     //printfn "options: %A" options
     let fileName = __SOURCE_DIRECTORY__ + @"/data/TypeProviderConsole/Program.fs"    
     let fileSource = File.ReadAllText(fileName)
-    let fileCheckResults, _ = checker.ParseAndCheckFileInProject(fileName, 0, fileSource, options) |> Async.RunSynchronously
-    //printfn "Errors: %A" fileCheckResults.Errors
+    let fileParseResults, fileCheckAnswer = checker.ParseAndCheckFileInProject(fileName, 0, fileSource, options) |> Async.RunSynchronously
+    let fileCheckResults = 
+        match fileCheckAnswer with
+        | FSharpCheckFileAnswer.Succeeded(res) -> res
+        | res -> failwithf "Parsing did not finish... (%A)" res
+
+    printfn "Parse Errors: %A" fileParseResults.Errors
+    printfn "Errors: %A" fileCheckResults.Errors
     fileCheckResults.Errors |> Array.exists (fun error -> error.Severity = FSharpErrorSeverity.Error) |> shouldEqual false
+
+
+
+
+//------------------------------------------------------------------------------------
+
+[<Test>]
+let ``Projects creating generated types should not utilize cross-project-references but should still analyze oK once project is built`` () =
+    //let options = ProjectCracker.GetProjectOptionsFromProjectFile(projectFile, [("Configuration", "Debug")])
+    let options = 
+          {ProjectFileName =
+            __SOURCE_DIRECTORY__ + @"/data/TypeProvidersBug/TestConsole/TestConsole.fsproj";
+           SourceFiles =
+            [|__SOURCE_DIRECTORY__ + @"/data/TypeProvidersBug/TestConsole/AssemblyInfo.fs";
+              __SOURCE_DIRECTORY__ + @"/data/TypeProvidersBug/TestConsole/Program.fs"|];
+           OtherOptions =
+            [|yield "--simpleresolution"; 
+              yield "--noframework";
+              yield "--out:" + __SOURCE_DIRECTORY__ + @"/data/TypeProvidersBug/TestConsole/bin/Debug/TestConsole.exe";
+              yield "--doc:" + __SOURCE_DIRECTORY__ + @"/data/TypeProvidersBug/TestConsole/bin/Debug/TestConsole.XML";
+              yield "--subsystemversion:6.00"; 
+              yield "--highentropyva+"; 
+              yield "--fullpaths";
+              yield "--flaterrors"; 
+              yield "--target:exe"; 
+              yield "--define:DEBUG"; 
+              yield "--define:TRACE";
+              yield "--debug+"; 
+              yield "--optimize-"; 
+              yield "--tailcalls-"; 
+              yield "--debug:full";
+              yield "--platform:anycpu";
+              yield "-r:" + __SOURCE_DIRECTORY__ + @"/../../packages/FSharp.Configuration.1.3.0/lib/net45/FSharp.Configuration.dll";
+              for r in mkStandardProjectReferences () do
+                  yield "-r:" + r
+              yield "-r:" + __SOURCE_DIRECTORY__ + @"/data/TypeProvidersBug/TypeProvidersBug/bin/Debug/TypeProvidersBug.dll"|];
+           ReferencedProjects =
+            [|(__SOURCE_DIRECTORY__ + @"/data/TypeProvidersBug/TypeProvidersBug/bin/Debug/TypeProvidersBug.dll",
+               {ProjectFileName =
+                 __SOURCE_DIRECTORY__ + @"/data/TypeProvidersBug/TypeProvidersBug/TypeProvidersBug.fsproj";
+                SourceFiles =
+                 [|__SOURCE_DIRECTORY__ + @"/data/TypeProvidersBug/TypeProvidersBug/AssemblyInfo.fs";
+                   __SOURCE_DIRECTORY__ + @"/data/TypeProvidersBug/TypeProvidersBug/Library1.fs"|];
+                OtherOptions =
+                 [|yield "--simpleresolution"; 
+                   yield "--noframework";
+                   yield "--out:" + __SOURCE_DIRECTORY__ + @"/data/TypeProvidersBug/TypeProvidersBug/bin/Debug/TypeProvidersBug.dll";
+                   yield "--doc:" + __SOURCE_DIRECTORY__ + @"/data/TypeProvidersBug/TypeProvidersBug/bin/Debug/TypeProvidersBug.XML";
+                   yield "--subsystemversion:6.00"; 
+                   yield "--highentropyva+"; 
+                   yield "--fullpaths";
+                   yield "--flaterrors"; 
+                   yield "--target:library"; 
+                   yield "--define:DEBUG";
+                   yield "--define:TRACE"; 
+                   yield "--debug+"; 
+                   yield "--optimize-"; 
+                   yield "--tailcalls-";
+                   yield "--debug:full"; 
+                   yield "--platform:anycpu";
+                   yield "-r:" + __SOURCE_DIRECTORY__ + @"/../../packages/FSharp.Configuration.1.3.0/lib/net45/FSharp.Configuration.dll";
+                   for r in mkStandardProjectReferences () do
+                       yield "-r:" + r |];
+                ReferencedProjects = [||];
+                IsIncompleteTypeCheckEnvironment = false;
+                UseScriptResolutionRules = false;
+                LoadTime = System.DateTime.Now
+                UnresolvedReferences = None;
+                OriginalLoadReferences = [];
+                Stamp = None;
+                ExtraProjectInfo = None;})|];
+           IsIncompleteTypeCheckEnvironment = false;
+           UseScriptResolutionRules = false;
+           LoadTime = System.DateTime.Now
+           UnresolvedReferences = None;
+           Stamp = None;
+           OriginalLoadReferences = [];
+           ExtraProjectInfo = None;}
+    //printfn "options: %A" options
+    let fileName = __SOURCE_DIRECTORY__ + @"/data/TypeProvidersBug/TestConsole/Program.fs"    
+    let fileSource = File.ReadAllText(fileName)
+    let fileParseResults, fileCheckAnswer = checker.ParseAndCheckFileInProject(fileName, 0, fileSource, options) |> Async.RunSynchronously
+    let fileCheckResults = 
+        match fileCheckAnswer with
+        | FSharpCheckFileAnswer.Succeeded(res) -> res
+        | res -> failwithf "Parsing did not finish... (%A)" res
+
+    printfn "Parse Errors: %A" fileParseResults.Errors
+    printfn "Errors: %A" fileCheckResults.Errors
+    fileCheckResults.Errors |> Array.exists (fun error -> error.Severity = FSharpErrorSeverity.Error) |> shouldEqual false
+
+
 
 #endif
 

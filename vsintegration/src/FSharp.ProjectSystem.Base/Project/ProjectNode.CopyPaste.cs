@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
+// Copyright (c) Microsoft Corporation.  All Rights Reserved.  See License.txt in the project root for license information.
 
 using FSLib = Microsoft.FSharp.Compiler.AbstractIL.Internal.Library;
 using System;
@@ -38,11 +38,6 @@ namespace Microsoft.VisualStudio.FSharp.ProjectSystem
         public override int DragEnter(IOleDataObject pDataObject, uint grfKeyState, uint itemid, ref uint pdwEffect)
         {            
             pdwEffect = (uint)DropEffect.None;
-
-            if (this.SourceDraggedOrCutOrCopied)
-            {
-                return VSConstants.S_OK;
-            }
 
             this.dropDataType = QueryDropDataType(pDataObject);
             if (this.dropDataType != DropDataType.None)

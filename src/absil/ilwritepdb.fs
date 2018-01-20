@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
+// Copyright (c) Microsoft Corporation.  All Rights Reserved.  See License.txt in the project root for license information.
 
 module internal Microsoft.FSharp.Compiler.AbstractIL.ILPdbWriter
 
@@ -81,7 +81,7 @@ type PdbMethodData =
       MethName:string
       LocalSignatureToken: int32
       Params: PdbLocalVar array
-      RootScope: PdbMethodScope
+      RootScope: PdbMethodScope option
       Range: (PdbSourceLoc * PdbSourceLoc) option
       SequencePoints: PdbSequencePoint array }
 
@@ -219,12 +219,12 @@ let getRowCounts tableRowCounts =
     tableRowCounts |> Seq.iter(fun x -> builder.Add(x))
     builder.MoveToImmutable()
 
-let generatePortablePdb (embedAllSource:bool) (embedSourceList:string list) (sourceLink:string) showTimes (info:PdbData) = 
+let generatePortablePdb (embedAllSource:bool) (embedSourceList:string list) (sourceLink:string) showTimes (info:PdbData) isDeterministic =
     sortMethods showTimes info
     let externalRowCounts = getRowCounts info.TableRowCounts
     let docs = 
         match info.Documents with
-        | null -> Array.empty<PdbDocumentData>
+        | null -> Array.empty
         | _ -> info.Documents
 
     let metadata = MetadataBuilder()
@@ -324,23 +324,28 @@ let generatePortablePdb (embedAllSource:bool) (embedSourceList:string list) (sou
         let docHandle, sequencePointBlob =
             let sps =
                 match minfo.SequencePoints with
-                | null -> Array.empty<PdbSequencePoint>
+                | null -> Array.empty
                 | _ ->
                     match minfo.Range with
-                    | None -> Array.empty<PdbSequencePoint>
+                    | None -> Array.empty
                     | Some (_,_) -> minfo.SequencePoints
 
-            let getDocumentHandle d =
-                if docs.Length = 0 || d < 0 || d > docs.Length then
-                    Unchecked.defaultof<DocumentHandle>
-                else 
-                    match documentIndex.TryGetValue(docs.[d].File) with
-                    | false, _ -> Unchecked.defaultof<DocumentHandle>
-                    | true, h -> h
+            let builder = new BlobBuilder()
+            builder.WriteCompressedInteger(minfo.LocalSignatureToken)
 
             if sps.Length = 0 then
+                builder.WriteCompressedInteger( 0 )
+                builder.WriteCompressedInteger( 0 )
                 Unchecked.defaultof<DocumentHandle>, Unchecked.defaultof<BlobHandle>
             else
+                let getDocumentHandle d =
+                    if docs.Length = 0 || d < 0 || d > docs.Length then
+                        Unchecked.defaultof<DocumentHandle>
+                    else 
+                        match documentIndex.TryGetValue(docs.[d].File) with
+                        | false, _ -> Unchecked.defaultof<DocumentHandle>
+                        | true, h -> h
+
                 // Return a document that the entire method body is declared within.
                 // If part of the method body is in another document returns nil handle.
                 let tryGetSingleDocumentIndex =
@@ -350,12 +355,8 @@ let generatePortablePdb (embedAllSource:bool) (embedSourceList:string list) (sou
                             singleDocumentIndex <- -1
                     singleDocumentIndex
 
-                let builder = new BlobBuilder()
-                builder.WriteCompressedInteger(minfo.LocalSignatureToken)
-
                 // Initial document:  When sp's spread over more than one document we put the initial document here.
                 let singleDocumentIndex = tryGetSingleDocumentIndex
-
                 if singleDocumentIndex = -1 then
                     builder.WriteCompressedInteger( MetadataTokens.GetRowNumber(DocumentHandle.op_Implicit(getDocumentHandle (sps.[0].Document))) )
 
@@ -438,14 +439,29 @@ let generatePortablePdb (embedAllSource:bool) (embedSourceList:string list) (sou
                                     for localVariable in s.Locals do
                                         lastLocalVariableHandle <- metadata.AddLocalVariable(LocalVariableAttributes.None, localVariable.Index, metadata.GetOrAddString(localVariable.Name))
                                     )
-        writeMethodScope minfo.RootScope )
+
+        match minfo.RootScope with
+        | None -> ()
+        | Some scope -> writeMethodScope scope )
 
     let entryPoint =
         match info.EntryPoint with
         | None -> MetadataTokens.MethodDefinitionHandle(0)
         | Some x -> MetadataTokens.MethodDefinitionHandle(x)
 
-    let serializer = PortablePdbBuilder(metadata, externalRowCounts, entryPoint, null)
+    let deterministicIdProvider isDeterministic  : System.Func<IEnumerable<Blob>, BlobContentId> = 
+        match isDeterministic with
+        | false -> null
+        | true ->
+            let convert (content:IEnumerable<Blob>) = 
+                use sha = System.Security.Cryptography.SHA1.Create()    // IncrementalHash is core only
+                let hash = content 
+                           |> Seq.map ( fun c -> c.GetBytes().Array |> sha.ComputeHash )         
+                           |> Seq.collect id |> Array.ofSeq |> sha.ComputeHash
+                BlobContentId.FromHash(hash)
+            System.Func<IEnumerable<Blob>, BlobContentId>( convert )
+
+    let serializer = PortablePdbBuilder(metadata, externalRowCounts, entryPoint, deterministicIdProvider isDeterministic)
     let blobBuilder = new BlobBuilder()
     let contentId= serializer.Serialize(blobBuilder)
     let portablePdbStream = new MemoryStream()
@@ -552,7 +568,9 @@ let writePdbInfo showTimes f fpdb info cvChunk =
                       sco.Children |> Array.iter (writePdbScope (if nested then Some sco else parent))
                       if nested then pdbCloseScope !pdbw sco.EndOffset
 
-              writePdbScope None minfo.RootScope 
+              match minfo.RootScope with
+              | None -> ()
+              | Some rootscope -> writePdbScope None rootscope 
               pdbCloseMethod !pdbw
           end)
     reportTime showTimes "PDB: Wrote methods"
@@ -662,7 +680,10 @@ let writeMdbInfo fmdb f info =
                 for child in scope.Children do 
                     writeScope(child)
                 wr?CloseScope(scope.EndOffset)          
-            writeScope(meth.RootScope)
+            match meth.RootScope with
+            | None -> ()
+            | Some rootscope -> writeScope(rootscope)
+
 
             // Finished generating debug information for the curretn method
             wr?CloseMethod()
@@ -709,5 +730,8 @@ let logDebugInfo (outfile:string) (info:PdbData) =
         if scope.Locals.Length > 0 then
           fprintfn sw "      %s  Locals: %A" offs [ for p in scope.Locals -> sprintf "%d: %s" p.Index p.Name ]
         for child in scope.Children do writeScope (offs + "  ") child
-      writeScope "" meth.RootScope
+
+      match meth.RootScope with
+      | None -> ()
+      | Some rootscope -> writeScope "" rootscope
       fprintfn sw ""

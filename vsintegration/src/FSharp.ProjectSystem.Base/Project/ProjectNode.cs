@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
+// Copyright (c) Microsoft Corporation.  All Rights Reserved.  See License.txt in the project root for license information.
 
 using FSLib = Microsoft.FSharp.Compiler.AbstractIL.Internal.Library;
 using System;
@@ -37,6 +37,7 @@ using System.Linq;
 using Microsoft.Build.Execution;
 
 using Microsoft.VisualStudio.FSharp.LanguageService;
+using Microsoft.VisualStudio.TextManager.Interop;
 
 namespace Microsoft.VisualStudio.FSharp.ProjectSystem
 {
@@ -303,9 +304,10 @@ namespace Microsoft.VisualStudio.FSharp.ProjectSystem
         IBuildDependencyUpdate,
         IProjectEventsListener,
         IReferenceContainerProvider,
-        IVsProjectSpecialFiles
-        , IVsDesignTimeAssemblyResolution
-        , IVsProjectUpgrade
+        IVsProjectSpecialFiles, 
+        IVsDesignTimeAssemblyResolution, 
+        IVsProjectUpgrade,
+        IVsSupportItemHandoff
     {
         /// <summary>
         /// This class stores mapping from ids -> objects. Uses as a replacement of EventSinkCollection (ESC)
@@ -482,18 +484,12 @@ namespace Microsoft.VisualStudio.FSharp.ProjectSystem
 
         private IDEBuildLogger buildLogger;
 
-        private bool useProvidedLogger;
-
         private Microsoft.Build.Evaluation.Project buildProject;
 
         // TODO cache an instance for perf; but be sure not to be stale (correctness)
         private BuildActionConverter buildActionConverter = new BuildActionConverter();
 
         private ConfigProvider configProvider;
-
-        private Shell.TaskProvider taskProvider;
-
-        private TaskReporter taskReporter;
 
         private Shell.ErrorListProvider projectErrorListProvider;
 
@@ -1062,41 +1058,6 @@ namespace Microsoft.VisualStudio.FSharp.ProjectSystem
         }
 
         /// <summary>
-        /// Gets or sets the build logger.
-        /// </summary>
-        public IDEBuildLogger BuildLogger
-        {
-            get
-            {
-                return this.buildLogger;
-            }
-            private set
-            {
-                this.buildLogger = value;
-                this.useProvidedLogger = true;
-            }
-        }
-
-        /// <summary>
-        /// Gets the taskprovider.
-        /// </summary>
-        public Shell.TaskProvider TaskProvider
-        {
-            get
-            {
-                return this.taskProvider;
-            }
-        }
-
-        internal TaskReporter TaskReporter
-        {
-            get
-            {
-                return this.taskReporter;
-            }
-        }
-
-        /// <summary>
         /// Gets the project file name.
         /// </summary>
         public string FileName
@@ -1384,17 +1345,6 @@ namespace Microsoft.VisualStudio.FSharp.ProjectSystem
             CCITracing.TraceCall();
             this.site = new ServiceProvider(site);
 
-            if (taskReporter != null)
-            {
-                taskReporter.Dispose();
-            }
-            if (taskProvider != null)
-            {
-                taskProvider.Dispose();
-            }
-            taskProvider = new Shell.TaskProvider ( this.site);
-            taskReporter = new TaskReporter ("Project System (ProjectNode.cs)");
-            taskReporter.TaskListProvider = new TaskListProvider(taskProvider);
             if (projectErrorListProvider != null)
             {
                 projectErrorListProvider.Dispose();
@@ -1575,22 +1525,10 @@ namespace Microsoft.VisualStudio.FSharp.ProjectSystem
                             {
                                 this.projectEventsProvider.AfterProjectFileOpened -= this.OnAfterProjectOpen;
                             }
-                            if (this.taskReporter != null)
-                            {
-                                this.taskReporter.Dispose();
-                                this.taskReporter = null;                                
-                            }
                             if (projectErrorListProvider != null)
                             {
                                 projectErrorListProvider.Dispose();
                                 projectErrorListProvider = null;
-                            }
-                            if (this.taskProvider != null)
-                            {
-                                this.taskProvider.Tasks.Clear();
-                                this.taskProvider.Refresh();
-                                this.taskProvider.Dispose();
-                                this.taskProvider = null;
                             }
                             if (buildLogger != null)
                             {
@@ -1706,7 +1644,7 @@ namespace Microsoft.VisualStudio.FSharp.ProjectSystem
                     result |= QueryStatusResult.SUPPORTED;
                     if (options == null)
                     {
-                        var currentConfigName = FetchCurrentConfigurationName();
+                        var currentConfigName = GetCurrentConfigurationName();
                         if (currentConfigName != null)
                         {
                             GetProjectOptions(currentConfigName.Value);
@@ -1768,7 +1706,7 @@ namespace Microsoft.VisualStudio.FSharp.ProjectSystem
                 {
                     if (options == null)
                     {
-                        var currentConfigName = FetchCurrentConfigurationName();
+                        var currentConfigName = GetCurrentConfigurationName();
                         if (currentConfigName != null)
                         {
                             GetProjectOptions(currentConfigName.Value);
@@ -3070,13 +3008,14 @@ namespace Microsoft.VisualStudio.FSharp.ProjectSystem
         /// <param name="output"></param>
         public virtual void SetOutputLogger(IVsOutputWindowPane output)
         {
+            var errorReporter = this.GetBuildErrorReporter();
+
             // Create our logger, if it was not specified
-            if (!this.useProvidedLogger || this.buildLogger == null)
+            if (buildLogger == null)
             {
                 // Because we may be aggregated, we need to make sure to get the outer IVsHierarchy
                 // Create the logger
-                this.BuildLogger = new IDEBuildLogger(output, this.TaskProvider, this.InteropSafeIVsHierarchy);
-                this.buildLogger.TaskReporter = this.TaskReporter;
+                buildLogger = new IDEBuildLogger(output, this.InteropSafeIVsHierarchy, errorReporter);
 
                 // To retrive the verbosity level, the build logger depends on the registry root 
                 // (otherwise it will used an hardcoded default)
@@ -3085,18 +3024,18 @@ namespace Microsoft.VisualStudio.FSharp.ProjectSystem
                 {
                     string registryRoot;
                     registry.GetLocalRegistryRoot(out registryRoot);
-                    IDEBuildLogger logger = this.BuildLogger as IDEBuildLogger;
-                    if (!String.IsNullOrEmpty(registryRoot) && (null != logger))
+                    if (!String.IsNullOrEmpty(registryRoot) && (buildLogger != null))
                     {
-                        logger.BuildVerbosityRegistryRoot = registryRoot;
-                        logger.ErrorString = this.ErrorString;
-                        logger.WarningString = this.WarningString;
+                        buildLogger.BuildVerbosityRegistryRoot = registryRoot;
+                        buildLogger.ErrorString = this.ErrorString;
+                        buildLogger.WarningString = this.WarningString;
                     }
                 }
             }
             else
             {
-                this.BuildLogger.OutputWindowPane = output;
+                buildLogger.OutputWindowPane = output;
+                buildLogger.ErrorReporter = errorReporter;
             }
         }
 
@@ -3129,6 +3068,8 @@ namespace Microsoft.VisualStudio.FSharp.ProjectSystem
         }
 
         public abstract void ComputeSourcesAndFlags();
+
+        public abstract IVsLanguageServiceBuildErrorReporter2 GetBuildErrorReporter();
 
         internal abstract int FixupAppConfigOnTargetFXChange(string newTargetFramework, string targetFSharpCoreVersion, bool autoGenerateBindingRedirects);
 
@@ -3297,7 +3238,7 @@ namespace Microsoft.VisualStudio.FSharp.ProjectSystem
 
                 // Do the actual Build
                 var loggerList = new System.Collections.Generic.List<Microsoft.Build.Framework.ILogger>(this.buildEngine.Loggers);
-                if (useProvidedLogger && buildLogger != null)
+                if (buildLogger != null)
                     loggerList.Add(buildLogger);
                 if (myDebugLogger != null)
                     loggerList.Add(myDebugLogger);
@@ -3933,6 +3874,9 @@ namespace Microsoft.VisualStudio.FSharp.ProjectSystem
             var dict = new Dictionary<Microsoft.Build.Construction.ProjectItemElement, Microsoft.Build.Evaluation.ProjectItem>();
             foreach (var item in MSBuildProject.GetStaticAndVisibleItemsInOrder(this.buildProject))
             {
+                // File with "Content" or "None" build action is not compiled, so it's safe to use wildcard
+                if (item.ItemType == "Content" || item.ItemType == "None") continue;
+
                 Microsoft.Build.Evaluation.ProjectItem previousItem;
                 var key = item.Xml;
                 if (dict.TryGetValue(key, out previousItem))
@@ -4127,7 +4071,7 @@ namespace Microsoft.VisualStudio.FSharp.ProjectSystem
 
         private void TellMSBuildCurrentSolutionConfiguration()
         {
-            var canonicalCfgNameOpt = FetchCurrentConfigurationName();
+            var canonicalCfgNameOpt = GetCurrentConfigurationName();
             if (canonicalCfgNameOpt == null)
                 return;
             var canonicalCfgName = canonicalCfgNameOpt.Value;
@@ -4144,7 +4088,7 @@ namespace Microsoft.VisualStudio.FSharp.ProjectSystem
             this.UpdateMSBuildState();
         }
 
-        private ConfigCanonicalName? FetchCurrentConfigurationName()
+        private ConfigCanonicalName? GetCurrentConfigurationName()
         {
             if (Site == null)
                 return null;
@@ -4159,6 +4103,18 @@ namespace Microsoft.VisualStudio.FSharp.ProjectSystem
             cfgs[0].get_CanonicalName(out cfgName);
             // cfgName conventionally has form "Configuration|Platform"
             return new ConfigCanonicalName(cfgName);            
+        }
+
+        internal string GetCurrentOutputAssembly()
+        {
+            var currentConfigName = GetCurrentConfigurationName();
+            if (currentConfigName != null)
+            {
+                GetProjectOptions(currentConfigName.Value);
+                if (options != null)
+                    return options.OutputAssembly;
+            }
+            return null;
         }
 
         /// <summary>
@@ -4208,7 +4164,7 @@ namespace Microsoft.VisualStudio.FSharp.ProjectSystem
             this.isDirty = value;
             if (this.isDirty)
             {
-                this.lastModifiedTime = DateTime.Now;
+                this.lastModifiedTime = DateTime.UtcNow;
                 this.buildIsPrepared = false;
             }
         }
@@ -4966,8 +4922,12 @@ namespace Microsoft.VisualStudio.FSharp.ProjectSystem
                             
                             if (context == AddItemContext.Paste && FindChild(file) != null)
                             {
-                                // if we are doing 'Paste' and source file belongs to current project - generate fresh unique name
-                                newFileName = GenerateCopyOfFileName(baseDir, fileName);
+                                newFileName = Path.Combine(baseDir, fileName);
+                                if (FindChild(newFileName) != null)
+                                {
+                                    // if we are doing 'Paste' and source file belongs to current project - generate fresh unique name
+                                    newFileName = GenerateCopyOfFileName(baseDir, fileName);
+                                }
                             }
                             else if (!IsContainedWithinProjectDirectory(file))
                             {
@@ -5441,10 +5401,6 @@ namespace Microsoft.VisualStudio.FSharp.ProjectSystem
             
             // Fail if the document names passed are null.
             if (oldMkDoc == null || newMkDoc == null)
-                return VSConstants.E_INVALIDARG;
-
-            // Fail if the document names passed are equal.
-            if (oldMkDoc == newMkDoc)
                 return VSConstants.E_INVALIDARG;
 
             int hr = VSConstants.S_OK;
@@ -6442,10 +6398,14 @@ namespace Microsoft.VisualStudio.FSharp.ProjectSystem
 
         private bool IsTargetFrameworkInstalled()
         {
+           var targetFrameworkMoniker = new System.Runtime.Versioning.FrameworkName(GetTargetFrameworkMoniker());
+           //Only check for .NetFramework. The expectation is that other frameworks will perform any checks themselves.
+           if (targetFrameworkMoniker.Identifier != ".NetFramework")
+              return true;
+
            var multiTargeting = this.site.GetService(typeof(SVsFrameworkMultiTargeting)) as IVsFrameworkMultiTargeting;
            Array frameworks;
            Marshal.ThrowExceptionForHR(multiTargeting.GetSupportedFrameworks(out frameworks));
-           var targetFrameworkMoniker = new System.Runtime.Versioning.FrameworkName(GetTargetFrameworkMoniker());
            foreach (string fx in frameworks)
            {
                uint compat;
@@ -6654,6 +6614,16 @@ namespace Microsoft.VisualStudio.FSharp.ProjectSystem
                 }
             }
             return hierarchy;
+        }
+
+        public int HandoffItem(uint itemid, IVsProject3 pProjDest, string pszMkDocumentOld, string pszMkDocumentNew, IVsWindowFrame punkWindowFrame)
+        {
+            if (pProjDest == null)
+            {
+                return VSConstants.E_POINTER;
+            }
+
+            return pProjDest.TransferItem(pszMkDocumentOld, pszMkDocumentNew, punkWindowFrame);
         }
     }
     internal enum AddItemContext

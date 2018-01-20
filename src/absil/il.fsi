@@ -1,12 +1,8 @@
-// Copyright (c) Microsoft Corporation.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
+// Copyright (c) Microsoft Corporation.  All Rights Reserved.  See License.txt in the project root for license information.
 
 /// The "unlinked" view of .NET metadata and code.  Central to 
 ///  to Abstract IL library
-#if COMPILER_PUBLIC_API
 module public Microsoft.FSharp.Compiler.AbstractIL.IL 
-#else
-module internal Microsoft.FSharp.Compiler.AbstractIL.IL 
-#endif
 
 open Internal.Utilities
 open System.Collections.Generic
@@ -14,7 +10,8 @@ open System.Collections.Generic
 [<RequireQualifiedAccess>]
 type PrimaryAssembly = 
     | Mscorlib
-    | DotNetCore
+    | System_Runtime
+    | NetStandard
 
     member Name: string
 
@@ -286,7 +283,7 @@ type ILTypeRef =
 
     member QualifiedName: string
 
-#if EXTENSIONTYPING
+#if !NO_EXTENSIONTYPING
     member QualifiedNameWithNoShortPrimaryAssembly: string
 #endif
 
@@ -803,9 +800,10 @@ type ILLocals = list<ILLocal>
 [<RequireQualifiedAccess; NoComparison; NoEquality>]
 type ILMethodBody = 
     { IsZeroInit: bool;
-      /// strictly speakin should be a uint16 
+      /// strictly speaking should be a uint16 
       MaxStack: int32; 
       NoInlining: bool;
+      AggressiveInlining: bool;
       Locals: ILLocals;
       Code: ILCode;
       SourceMarker: ILSourceMarker option }
@@ -850,7 +848,8 @@ type ILAttributeNamedArg = string * ILType * bool * ILAttribElem
 /// to ILAttribElem's as best as possible.  
 type ILAttribute =
     { Method: ILMethodSpec;  
-      Data: byte[] }
+      Data: byte[] 
+      Elements: ILAttribElem list}
 
 [<NoEquality; NoComparison; Sealed>]
 type ILAttributes =
@@ -1053,6 +1052,7 @@ type ILMethodDef =
       /// .NET 2.0 feature: SafeHandle finalizer must be run.
       IsMustRun: bool; 
       IsNoInline: bool;
+      IsAggressiveInline: bool;
      
       GenericParams: ILGenericParameterDefs;
       CustomAttrs: ILAttributes; }

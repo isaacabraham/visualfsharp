@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
+﻿// Copyright (c) Microsoft Corporation.  All Rights Reserved.  See License.txt in the project root for license information.
 
 namespace Microsoft.VisualStudio.FSharp.Editor
 
@@ -17,10 +17,6 @@ module internal FSharpConstants =
     [<Literal>]
     /// "BC6DD5A5-D4D6-4dab-A00D-A51242DBAF1B"
     let languageServiceGuidString = "BC6DD5A5-D4D6-4dab-A00D-A51242DBAF1B"
-    
-    [<Literal>]
-    /// "4EB7CCB7-4336-4FFD-B12B-396E9FD079A9"
-    let editorFactoryGuidString = "4EB7CCB7-4336-4FFD-B12B-396E9FD079A9"
     
     [<Literal>]
     /// "F#"
@@ -68,3 +64,9 @@ module internal Guids =
     [<Literal>]
     /// "9A66EB6A-DE52-4169-BC26-36FBD4312FD7"
     let codeFixesOptionPageIdString = "9A66EB6A-DE52-4169-BC26-36FBD4312FD7"
+
+    [<Literal>]
+    /// "8FDA964A-263D-4B4E-9560-29897535217C"
+    let languageServicePerformanceOptionPageIdString = "8FDA964A-263D-4B4E-9560-29897535217C"
+
+    let blueHighContrastThemeId = Guid "{ce94d289-8481-498b-8ca9-9b6191a315b9}"

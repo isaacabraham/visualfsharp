@@ -1,8 +1,8 @@
-// Copyright (c) Microsoft Corporation.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
+// Copyright (c) Microsoft Corporation.  All Rights Reserved.  See License.txt in the project root for license information.
 //
 // To run the tests in this file:
 //
-// Technique 1: Compile VisualFSharp.Unittests.dll and run it as a set of unit tests
+// Technique 1: Compile VisualFSharp.UnitTests.dll and run it as a set of unit tests
 //
 // Technique 2:
 //
@@ -12,8 +12,8 @@
 //   and capturing large amounts of structured output.
 (*
     cd Debug\net40\bin
-    .\fsc.exe --define:EXE -r:.\Microsoft.Build.Utilities.Core.dll -o VisualFSharp.Unittests.exe -g --optimize- -r .\FSharp.Compiler.Private.dll  -r .\FSharp.Editor.dll -r nunit.framework.dll ..\..\..\tests\service\FsUnit.fs ..\..\..\tests\service\Common.fs /delaysign /keyfile:..\..\..\src\fsharp\msft.pubkey ..\..\..\vsintegration\tests\unittests\GoToDefinitionServiceTests.fs 
-    .\VisualFSharp.Unittests.exe 
+    .\fsc.exe --define:EXE -r:.\Microsoft.Build.Utilities.Core.dll -o VisualFSharp.UnitTests.exe -g --optimize- -r .\FSharp.Compiler.Private.dll  -r .\FSharp.Editor.dll -r nunit.framework.dll ..\..\..\tests\service\FsUnit.fs ..\..\..\tests\service\Common.fs /delaysign /keyfile:..\..\..\src\fsharp\msft.pubkey ..\..\..\vsintegration\tests\unittests\GoToDefinitionServiceTests.fs 
+    .\VisualFSharp.UnitTests.exe 
 *)
 // Technique 3: 
 // 

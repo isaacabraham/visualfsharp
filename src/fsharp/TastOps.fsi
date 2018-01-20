@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
+// Copyright (c) Microsoft Corporation.  All Rights Reserved.  See License.txt in the project root for license information.
 
 /// Defines derived expression manipulation and construction functions.
 module internal Microsoft.FSharp.Compiler.Tastops 
@@ -19,7 +19,7 @@ open Microsoft.FSharp.Compiler.TcGlobals
 open Microsoft.FSharp.Compiler.Layout
 open Microsoft.FSharp.Compiler.Lib
 
-#if EXTENSIONTYPING
+#if !NO_EXTENSIONTYPING
 open Microsoft.FSharp.Compiler.ExtensionTyping
 #endif
 
@@ -414,6 +414,8 @@ val isUnionTy          : TcGlobals -> TType -> bool
 val isReprHiddenTy     : TcGlobals -> TType -> bool
 val isFSharpObjModelTy : TcGlobals -> TType -> bool
 val isRecdTy           : TcGlobals -> TType -> bool
+val isFSharpStructOrEnumTy : TcGlobals -> TType -> bool
+val isFSharpEnumTy     : TcGlobals -> TType -> bool
 val isTyparTy          : TcGlobals -> TType -> bool
 val isAnyParTy         : TcGlobals -> TType -> bool
 val tryAnyParTy        : TcGlobals -> TType -> Typar option
@@ -738,9 +740,12 @@ val tyOfExpr : TcGlobals -> Expr -> TType
 // Top expressions to implement top types
 //------------------------------------------------------------------------- 
 
+[<RequireQualifiedAccess>]
+type AllowTypeDirectedDetupling = Yes | No
+
 val stripTopLambda : Expr * TType -> Typars * Val list list * Expr * TType
-val InferArityOfExpr : TcGlobals -> TType -> Attribs list list -> Attribs -> Expr -> ValReprInfo
-val InferArityOfExprBinding : TcGlobals -> Val -> Expr -> ValReprInfo
+val InferArityOfExpr : TcGlobals -> AllowTypeDirectedDetupling -> TType -> Attribs list list -> Attribs -> Expr -> ValReprInfo
+val InferArityOfExprBinding : TcGlobals -> AllowTypeDirectedDetupling -> Val -> Expr -> ValReprInfo
 
 //-------------------------------------------------------------------------
 //  Copy expressions and types
@@ -988,7 +993,7 @@ val mkPrintfFormatTy : TcGlobals -> TType -> TType -> TType -> TType -> TType ->
 type TypeDefMetadata = 
      | ILTypeMetadata of TILObjectReprData
      | FSharpOrArrayOrByrefOrTupleOrExnTypeMetadata 
-#if EXTENSIONTYPING
+#if !NO_EXTENSIONTYPING
      | ProvidedTypeMetadata of  TProvidedTypeInfo
 #endif
 
@@ -1281,7 +1286,7 @@ val TyconRefHasAttribute : TcGlobals -> range -> BuiltinAttribInfo -> TyconRef -
 /// Try to find the AttributeUsage attribute, looking for the value of the AllowMultiple named parameter
 val TryFindAttributeUsageAttribute : TcGlobals -> range -> TyconRef -> bool option
 
-#if EXTENSIONTYPING
+#if !NO_EXTENSIONTYPING
 /// returns Some(assemblyName) for success
 val TryDecodeTypeProviderAssemblyAttr : ILGlobals -> ILAttribute -> string option
 #endif

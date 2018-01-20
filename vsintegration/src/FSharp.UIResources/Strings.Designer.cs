@@ -19,7 +19,7 @@ namespace Microsoft.VisualStudio.FSharp.UIResources {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "15.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     public class Strings {
@@ -106,11 +106,38 @@ namespace Microsoft.VisualStudio.FSharp.UIResources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to _Enable in-memory cross project references.
+        /// </summary>
+        public static string Enable_in_memory_cross_project_references {
+            get {
+                return ResourceManager.GetString("Enable_in_memory_cross_project_references", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Performance.
+        /// </summary>
+        public static string Language_Service_Performance {
+            get {
+                return ResourceManager.GetString("Language_Service_Performance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Navigation links.
         /// </summary>
         public static string Navigation_links {
             get {
                 return ResourceManager.GetString("Navigation_links", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Project check cache size.
+        /// </summary>
+        public static string Project_check_cache_size {
+            get {
+                return ResourceManager.GetString("Project_check_cache_size", resourceCulture);
             }
         }
         
@@ -165,6 +192,15 @@ namespace Microsoft.VisualStudio.FSharp.UIResources {
         public static string Solid_underline {
             get {
                 return ResourceManager.GetString("Solid_underline", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Analyze and suggest fixes for unused values.
+        /// </summary>
+        public static string Unused_declaration_code_fix {
+            get {
+                return ResourceManager.GetString("Unused_declaration_code_fix", resourceCulture);
             }
         }
         

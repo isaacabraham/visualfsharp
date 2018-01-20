@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
+// Copyright (c) Microsoft Corporation.  All Rights Reserved.  See License.txt in the project root for license information.
 
 module Microsoft.FSharp.Compiler.AbstractIL.IL 
 
@@ -52,15 +52,18 @@ let lazyMap f (x:Lazy<_>) =
 [<RequireQualifiedAccess>]
 type PrimaryAssembly = 
     | Mscorlib
-    | DotNetCore   
+    | System_Runtime   
+    | NetStandard   
 
     member this.Name = 
         match this with
         | Mscorlib -> "mscorlib"
-        | DotNetCore -> "System.Runtime"
+        | System_Runtime -> "System.Runtime"
+        | NetStandard -> "netstandard"
     static member IsSomePrimaryAssembly n = 
       n = PrimaryAssembly.Mscorlib.Name 
-      || n = PrimaryAssembly.DotNetCore.Name  
+      || n = PrimaryAssembly.System_Runtime.Name  
+      || n = PrimaryAssembly.NetStandard.Name  
 
 // -------------------------------------------------------------------- 
 // Utilities: type names
@@ -672,27 +675,33 @@ and [<RequireQualifiedAccess; StructuralEquality; StructuralComparison>]
         
     member x.QualifiedNameWithNoShortPrimaryAssembly = 
         x.AddQualifiedNameExtensionWithNoShortPrimaryAssembly(x.BasicQualifiedName)
+
     member x.TypeSpec =
       match x with 
       | ILType.Boxed tr | ILType.Value tr -> tr
       | _ -> invalidOp "not a nominal type"
+
     member x.Boxity =
       match x with 
       | ILType.Boxed _ -> AsObject
       | ILType.Value _ -> AsValue
       | _ -> invalidOp "not a nominal type"
+
     member x.TypeRef = 
       match x with 
       | ILType.Boxed tspec | ILType.Value tspec -> tspec.TypeRef
       | _ -> invalidOp "not a nominal type"
+
     member x.IsNominal = 
       match x with 
       | ILType.Boxed _ | ILType.Value _ -> true
       | _ -> false
+
     member x.GenericArgs =
       match x with 
       | ILType.Boxed tspec | ILType.Value tspec -> tspec.GenericArgs
       | _ -> []
+
     member x.IsTyvar =
       match x with 
       | ILType.TypeVar _ -> true | _ -> false
@@ -835,13 +844,14 @@ type ILAttribElem =
 type ILAttributeNamedArg =  (string * ILType * bool * ILAttribElem)
 type ILAttribute = 
     { Method: ILMethodSpec;
-      Data: byte[] }
+      Data: byte[] 
+      Elements: ILAttribElem list}
 
 [<NoEquality; NoComparison; Sealed>]
 type ILAttributes(f: unit -> ILAttribute[]) = 
-   let mutable array = InlineDelayInit<_>(f)
-   member x.AsArray = array.Value
-   member x.AsList = x.AsArray |> Array.toList
+    let mutable array = InlineDelayInit<_>(f)
+    member x.AsArray = array.Value
+    member x.AsList = x.AsArray |> Array.toList
 
 type ILCodeLabel = int
 
@@ -1072,6 +1082,7 @@ type ILMethodBody =
     { IsZeroInit: bool;
       MaxStack: int32;
       NoInlining: bool;
+      AggressiveInlining: bool;
       Locals: ILLocals;
       Code:  ILCode;
       SourceMarker: ILSourceMarker option }
@@ -1371,6 +1382,7 @@ type ILMethodDef =
       IsPreserveSig: bool;
       IsMustRun: bool;
       IsNoInline: bool;
+      IsAggressiveInline : bool
       GenericParams: ILGenericParameterDefs;
       CustomAttrs: ILAttributes; }
     member x.ParameterTypes = typesOfILParams x.Parameters
@@ -2276,6 +2288,7 @@ let mkILMethodBody (zeroinit,locals,maxstack,code,tag) : ILMethodBody =
   { IsZeroInit=zeroinit
     MaxStack=maxstack
     NoInlining=false
+    AggressiveInlining=false
     Locals= locals 
     Code= code
     SourceMarker=tag }
@@ -2311,6 +2324,7 @@ let mkILCtor (access,args,impl) =
       IsUnmanagedExport=false;
       IsSynchronized=false;
       IsNoInline=false;
+      IsAggressiveInline=false
       IsMustRun=false;
       IsPreserveSig=false;
       CustomAttrs = emptyILCustomAttrs; }
@@ -2364,6 +2378,7 @@ let mkILStaticMethod (genparams,nm,access,args,ret,impl) =
       IsUnmanagedExport=false;
       IsSynchronized=false;
       IsNoInline=false;
+      IsAggressiveInline=false;
       IsMustRun=false;
       IsPreserveSig=false; }
 
@@ -2393,6 +2408,7 @@ let mkILClassCtor impl =
       IsUnmanagedExport=false; 
       IsSynchronized=false;
       IsNoInline=false;
+      IsAggressiveInline=false
       IsMustRun=false;
       IsPreserveSig=false;  } 
 
@@ -2433,6 +2449,7 @@ let mkILGenericVirtualMethod (nm,access,genparams,actual_args,actual_ret,impl) =
     IsUnmanagedExport=false; 
     IsSynchronized=false;
     IsNoInline=false;
+    IsAggressiveInline=false
     IsMustRun=false;
     IsPreserveSig=false; }
     
@@ -2462,6 +2479,7 @@ let mkILGenericNonVirtualMethod (nm,access,genparams, actual_args,actual_ret, im
     IsUnmanagedExport=false; 
     IsSynchronized=false;
     IsNoInline=false;
+    IsAggressiveInline=false
     IsMustRun=false;
     IsPreserveSig=false; }
     
@@ -3077,12 +3095,12 @@ let rec decodeCustomAttrElemType (ilg: ILGlobals) bytes sigptr x =
 let rec encodeCustomAttrPrimValue ilg c = 
     match c with 
     | ILAttribElem.Bool b -> [| (if b then 0x01uy else 0x00uy) |]
-    | ILAttribElem.String None 
-    | ILAttribElem.Type None 
+    | ILAttribElem.String None
+    | ILAttribElem.Type None
     | ILAttribElem.TypeRef None
     | ILAttribElem.Null -> [| 0xFFuy |]
     | ILAttribElem.String (Some s) -> encodeCustomAttrString s
-    | ILAttribElem.Char x -> u16AsBytes (uint16 x)
+    | ILAttribElem.Char x ->  u16AsBytes (uint16 x)
     | ILAttribElem.SByte x -> i8AsBytes x
     | ILAttribElem.Int16 x -> i16AsBytes x
     | ILAttribElem.Int32 x -> i32AsBytes x
@@ -3124,9 +3142,9 @@ let mkILCustomAttribMethRef (ilg: ILGlobals) (mspec:ILMethodSpec, fixedArgs: lis
          yield! u16AsBytes (uint16 namedArgs.Length) 
          for namedArg in namedArgs do 
              yield! encodeCustomAttrNamedArg ilg namedArg |]
-
     { Method = mspec;
-      Data = args }
+      Data = args;
+      Elements = fixedArgs @ (namedArgs |> List.map(fun (_,_,_,e) -> e)) }
 
 let mkILCustomAttribute ilg (tref,argtys,argvs,propvs) = 
     mkILCustomAttribMethRef ilg (mkILNonGenericCtorMethSpec (tref,argtys),argvs,propvs)
@@ -3366,10 +3384,10 @@ let decodeILAttribData (ilg: ILGlobals) (ca: ILAttribute) =
           let n,sigptr = sigptr_get_i32 bytes sigptr
           if n = 0xFFFFFFFF then ILAttribElem.Null,sigptr else
           let rec parseElems acc n sigptr = 
-            if n = 0 then List.rev acc else
+            if n = 0 then List.rev acc, sigptr else
             let v,sigptr = parseVal elemTy sigptr
             parseElems (v ::acc) (n-1) sigptr
-          let elems = parseElems [] n sigptr
+          let elems, sigptr = parseElems [] n sigptr 
           ILAttribElem.Array(elemTy,elems), sigptr
       | ILType.Value _ ->  (* assume it is an enumeration *)
           let n,sigptr = sigptr_get_i32 bytes sigptr
@@ -3391,7 +3409,7 @@ let decodeILAttribData (ilg: ILGlobals) (ca: ILAttribute) =
       let et,sigptr = sigptr_get_u8 bytes sigptr
       // We have a named value 
       let ty,sigptr = 
-        if (0x50 = (int et) || 0x55 = (int et)) then
+        if ( (* 0x50 = (int et) || *) 0x55 = (int et)) then
             let qualified_tname,sigptr = sigptr_get_serstring bytes sigptr
             let unqualified_tname, rest = 
                 let pieces = qualified_tname.Split(',')
@@ -3638,7 +3656,7 @@ let computeILRefs modul =
     { AssemblyReferences = Seq.fold (fun acc x -> x::acc) [] s.refsA
       ModuleReferences =  Seq.fold (fun acc x -> x::acc) [] s.refsM }
 
-let tspan = System.TimeSpan(System.DateTime.Now.Ticks - System.DateTime(2000,1,1).Ticks)
+let tspan = System.TimeSpan(System.DateTime.UtcNow.Ticks - System.DateTime(2000,1,1).Ticks)
 
 let parseILVersion (vstr : string) = 
     // matches "v1.2.3.4" or "1.2.3.4". Note, if numbers are missing, returns -1 (not 0).
@@ -3649,7 +3667,7 @@ let parseILVersion (vstr : string) =
     // account for wildcards
     if versionComponents.Length > 2 then
       let defaultBuild = (uint16)tspan.Days % System.UInt16.MaxValue - 1us
-      let defaultRevision = (uint16)(System.DateTime.Now.TimeOfDay.TotalSeconds / 2.0) % System.UInt16.MaxValue - 1us
+      let defaultRevision = (uint16)(System.DateTime.UtcNow.TimeOfDay.TotalSeconds / 2.0) % System.UInt16.MaxValue - 1us
       if versionComponents.[2] = "*" then
         if versionComponents.Length > 3 then
           failwith "Invalid version format"

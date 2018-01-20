@@ -1,11 +1,10 @@
-// Copyright (c) Microsoft Corporation.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
+// Copyright (c) Microsoft Corporation.  All Rights Reserved.  See License.txt in the project root for license information.
 
 
 /// Select members from a type by name, searching the type hierarchy if needed
 module internal Microsoft.FSharp.Compiler.InfoReader
 
 open Microsoft.FSharp.Compiler.AbstractIL.IL 
-open Microsoft.FSharp.Compiler.AbstractIL.Internal 
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 
 open Microsoft.FSharp.Compiler 
@@ -53,7 +52,7 @@ let GetImmediateIntrinsicMethInfosOfType (optFilter,ad) g amap m typ =
     let minfos =
 
         match metadataOfTy g typ with 
-#if EXTENSIONTYPING
+#if !NO_EXTENSIONTYPING
         | ProvidedTypeMetadata info -> 
             let st = info.ProvidedType
             let meths = 
@@ -122,7 +121,7 @@ let GetImmediateIntrinsicPropInfosOfType (optFilter,ad) g amap m typ =
     let pinfos =
 
         match metadataOfTy g typ with 
-#if EXTENSIONTYPING
+#if !NO_EXTENSIONTYPING
         | ProvidedTypeMetadata info -> 
             let st = info.ProvidedType
             let matchingProps =
@@ -155,6 +154,17 @@ let GetImmediateIntrinsicPropInfosOfType (optFilter,ad) g amap m typ =
     let pinfos = pinfos |> List.filter (IsPropInfoAccessible g amap m ad)
     pinfos
 
+// Checks whether the given type has an indexer property.
+let IsIndexerType g amap typ = 
+    isArray1DTy g typ ||
+    isListTy g typ ||
+    match tryDestAppTy g typ with
+    | Some tcref ->
+        let _, entityTy = generalizeTyconRef tcref
+        let props = GetImmediateIntrinsicPropInfosOfType (None, AccessibleFromSomeFSharpCode) g amap range0 entityTy 
+        props |> List.exists (fun x -> x.PropertyName = "Item")
+    | _ -> false
+
 
 /// Sets of methods up the hierarchy, ignoring duplicates by name and sig.
 /// Used to collect sets of virtual methods, protected methods, protected
@@ -174,7 +184,7 @@ type InfoReader(g:TcGlobals, amap:Import.ImportMap) =
     let GetImmediateIntrinsicILFieldsOfType (optFilter,ad) m typ =
         let infos =
             match metadataOfTy g typ with 
-#if EXTENSIONTYPING
+#if !NO_EXTENSIONTYPING
             | ProvidedTypeMetadata info -> 
                 let st = info.ProvidedType
                 match optFilter with
@@ -199,7 +209,7 @@ type InfoReader(g:TcGlobals, amap:Import.ImportMap) =
     let ComputeImmediateIntrinsicEventsOfType (optFilter,ad) m typ =
         let infos =
             match metadataOfTy g typ with 
-#if EXTENSIONTYPING
+#if !NO_EXTENSIONTYPING
             | ProvidedTypeMetadata info -> 
                 let st = info.ProvidedType
                 match optFilter with
@@ -415,7 +425,7 @@ let GetIntrinsicConstructorInfosOfType (infoReader:InfoReader) m ty =
     let amap = infoReader.amap 
     if isAppTy g ty then
         match metadataOfTy g ty with 
-#if EXTENSIONTYPING
+#if !NO_EXTENSIONTYPING
         | ProvidedTypeMetadata info -> 
             let st = info.ProvidedType
             [ for ci in st.PApplyArray((fun st -> st.GetConstructors()), "GetConstructors", m) do
